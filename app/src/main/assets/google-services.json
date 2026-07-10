@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "997644394380",
+    "project_id": "shop-5b949",
+    "storage_bucket": "shop-5b949.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:997644394380:android:0361442c30fcf00ec0c0a9",
+        "android_client_info": {
+          "package_name": "com.example.momosshopmanager"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBZ67q40WD-RNudLRSyiYBMFiGdXHLBzmE"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

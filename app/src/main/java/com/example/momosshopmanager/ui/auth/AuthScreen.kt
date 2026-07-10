@@ -45,8 +45,12 @@ fun AuthScreen(viewModel: SalesViewModel) {
     var syncCode by remember { mutableStateOf("") }
     var pin by remember { mutableStateOf("") }
     
-    val databaseUrlState = viewModel.databaseUrl.collectAsState()
-    var databaseUrl by remember { mutableStateOf(databaseUrlState.value) }
+    val databaseUrlState by viewModel.databaseUrl.collectAsState()
+    var databaseUrl by remember { mutableStateOf(databaseUrlState) }
+    
+    LaunchedEffect(databaseUrlState) {
+        databaseUrl = databaseUrlState
+    }
     
     // OTP State
     var simulatedOtp by remember { mutableStateOf("") }

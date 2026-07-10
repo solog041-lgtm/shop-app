@@ -5,6 +5,8 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
 import java.io.BufferedReader
 import java.io.InputStreamReader
 import java.io.OutputStreamWriter
@@ -12,7 +14,7 @@ import java.net.HttpURLConnection
 import java.net.URL
 
 object SyncManager {
-    var databaseUrl: String = "https://momos-shop-manager-default-rtdb.asia-southeast1.firebasedatabase.app"
+    var databaseUrl: String = "https://shop-5b949-default-rtdb.asia-southeast1.firebasedatabase.app"
     private val json = Json { ignoreUnknownKeys = true; coerceInputValues = true }
 
     /**
@@ -61,6 +63,57 @@ object SyncManager {
         } finally {
             connection?.disconnect()
         }
+    }
+
+    /**
+     * Reads google-services.json from assets, extracts project_id,
+     * and pings standard database region URLs to detect the active one.
+     */
+    suspend fun detectAndVerifyDatabaseUrl(context: android.content.Context): String? = withContext(Dispatchers.IO) {
+        val projectId = try {
+            val jsonString = context.assets.open("google-services.json").bufferedReader().use { it.readText() }
+            val element = Json.parseToJsonElement(jsonString).jsonObject
+            val projectInfo = element["project_info"]?.jsonObject ?: return@withContext null
+            
+            val configUrl = projectInfo["firebase_url"]?.jsonPrimitive?.content
+            if (!configUrl.isNullOrBlank()) {
+                return@withContext configUrl
+            }
+            
+            projectInfo["project_id"]?.jsonPrimitive?.content ?: return@withContext null
+        } catch (e: Exception) {
+            return@withContext null
+        }
+
+        // Try standard regions
+        val regions = listOf(
+            "https://$projectId-default-rtdb.asia-southeast1.firebasedatabase.app",
+            "https://$projectId-default-rtdb.firebaseio.com",
+            "https://$projectId-default-rtdb.europe-west1.firebasedatabase.app"
+        )
+        
+        for (url in regions) {
+            var connection: HttpURLConnection? = null
+            try {
+                val testUrl = URL("$url/.json")
+                connection = testUrl.openConnection() as HttpURLConnection
+                connection.requestMethod = "GET"
+                connection.connectTimeout = 3000
+                connection.readTimeout = 3000
+                val code = connection.responseCode
+                // A valid Firebase RTDB database (even if empty) returns 200 OK with body "null"
+                if (code in 200..299) {
+                    return@withContext url
+                }
+            } catch (e: Exception) {
+                // ignore and try next
+            } finally {
+                connection?.disconnect()
+            }
+        }
+        
+        // Fallback to Singapore
+        "https://$projectId-default-rtdb.asia-southeast1.firebasedatabase.app"
     }
 
     // --- Sales Sync ---

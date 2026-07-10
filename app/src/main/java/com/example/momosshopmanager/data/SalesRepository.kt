@@ -40,6 +40,16 @@ class SalesRepository(context: Context) {
         loadMenu()
         SyncManager.databaseUrl = getDatabaseUrl()
 
+        // Auto-detect database URL from google-services.json if using the default placeholder
+        if (SyncManager.databaseUrl.contains("momos-shop-manager-default-rtdb")) {
+            repositoryScope.launch {
+                val detected = SyncManager.detectAndVerifyDatabaseUrl(context)
+                if (detected != null) {
+                    setDatabaseUrl(detected)
+                }
+            }
+        }
+
         // Start background periodic sync loop
         repositoryScope.launch {
             while (true) {
@@ -72,7 +82,7 @@ class SalesRepository(context: Context) {
     fun getSyncCode(): String = prefs.getString("sync_code", "") ?: ""
     fun setSyncCode(code: String) = prefs.edit().putString("sync_code", code).apply()
 
-    fun getDatabaseUrl(): String = prefs.getString("database_url", "https://momos-shop-manager-default-rtdb.asia-southeast1.firebasedatabase.app") ?: "https://momos-shop-manager-default-rtdb.asia-southeast1.firebasedatabase.app"
+    fun getDatabaseUrl(): String = prefs.getString("database_url", "https://shop-5b949-default-rtdb.asia-southeast1.firebasedatabase.app") ?: "https://shop-5b949-default-rtdb.asia-southeast1.firebasedatabase.app"
     fun setDatabaseUrl(url: String) {
         val cleanUrl = url.trim().removeSuffix("/")
         prefs.edit().putString("database_url", cleanUrl).apply()
