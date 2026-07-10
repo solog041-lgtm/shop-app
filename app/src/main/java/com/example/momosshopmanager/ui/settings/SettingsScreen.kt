@@ -211,6 +211,69 @@ fun SettingsScreen(viewModel: SalesViewModel) {
                     HorizontalDivider(color = DarkSurfaceVariant, thickness = 0.5.dp)
                     Spacer(modifier = Modifier.height(16.dp))
 
+                    // Database URL Display
+                    val databaseUrl by viewModel.databaseUrl.collectAsState()
+                    var editingDbUrl by remember { mutableStateOf(false) }
+                    var tempDbUrl by remember { mutableStateOf(databaseUrl) }
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(text = "Firebase Database URL", style = MaterialTheme.typography.labelMedium, color = TextSecondary)
+                            Spacer(modifier = Modifier.height(4.dp))
+                            if (editingDbUrl && isOwner) {
+                                OutlinedTextField(
+                                    value = tempDbUrl,
+                                    onValueChange = { tempDbUrl = it },
+                                    singleLine = true,
+                                    modifier = Modifier.fillMaxWidth(),
+                                    colors = OutlinedTextFieldDefaults.colors(
+                                        focusedBorderColor = MomosOrange,
+                                        unfocusedBorderColor = DarkSurfaceVariant
+                                    )
+                                )
+                            } else {
+                                Text(
+                                    text = databaseUrl.ifBlank { "Not set" },
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = TextPrimary,
+                                    fontWeight = FontWeight.Medium
+                                )
+                            }
+                        }
+                        if (isOwner) {
+                            IconButton(
+                                onClick = {
+                                    if (editingDbUrl) {
+                                        if (tempDbUrl.trim().startsWith("https://") && tempDbUrl.trim().length > 12) {
+                                            viewModel.setDatabaseUrl(tempDbUrl.trim())
+                                            editingDbUrl = false
+                                            Toast.makeText(context, "Database URL updated!", Toast.LENGTH_SHORT).show()
+                                        } else {
+                                            Toast.makeText(context, "Invalid URL! Must start with https://", Toast.LENGTH_SHORT).show()
+                                        }
+                                    } else {
+                                        tempDbUrl = databaseUrl
+                                        editingDbUrl = true
+                                    }
+                                }
+                            ) {
+                                Icon(
+                                    imageVector = if (editingDbUrl) Icons.Rounded.Check else Icons.Rounded.Edit,
+                                    contentDescription = "Edit DB URL",
+                                    tint = MomosOrange
+                                )
+                            }
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(16.dp))
+                    HorizontalDivider(color = DarkSurfaceVariant, thickness = 0.5.dp)
+                    Spacer(modifier = Modifier.height(16.dp))
+
                     // Sync Toggle
                     Row(
                         modifier = Modifier.fillMaxWidth(),

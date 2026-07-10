@@ -102,9 +102,13 @@ class SalesViewModel(application: Application) : AndroidViewModel(application) {
     private val _isAppLocked = MutableStateFlow(repository.isAppLockedToday())
     val isAppLocked: StateFlow<Boolean> = _isAppLocked.asStateFlow()
 
+    private val _databaseUrl = MutableStateFlow(repository.getDatabaseUrl())
+    val databaseUrl: StateFlow<String> = _databaseUrl.asStateFlow()
+
     // --- Authentication Actions ---
 
     fun registerDevice(
+        dbUrl: String,
         code: String,
         phone: String,
         role: UserRole,
@@ -115,6 +119,10 @@ class SalesViewModel(application: Application) : AndroidViewModel(application) {
             repository._syncingState.value = true
             repository._syncStatusMessage.value = "Verifying..."
             
+            // Set DB URL first so SyncManager resolves correctly
+            repository.setDatabaseUrl(dbUrl)
+            _databaseUrl.value = repository.getDatabaseUrl()
+
             // 1. Register device to cloud
             val ok = SyncManager.registerDevice(code, phone, role, pin)
             if (ok) {
@@ -141,10 +149,15 @@ class SalesViewModel(application: Application) : AndroidViewModel(application) {
                 onResult(true, "Registration Successful!")
             } else {
                 repository._syncStatusMessage.value = "Registration Failed"
-                onResult(false, "Failed to connect to server. Check your Sync Code.")
+                onResult(false, "Failed to connect to server. Check your Sync Code & Database URL.")
             }
             repository._syncingState.value = false
         }
+    }
+
+    fun setDatabaseUrl(url: String) {
+        repository.setDatabaseUrl(url)
+        _databaseUrl.value = repository.getDatabaseUrl()
     }
 
     fun verifyDailyPin(pin: String): Boolean {

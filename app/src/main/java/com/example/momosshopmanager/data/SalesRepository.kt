@@ -38,6 +38,7 @@ class SalesRepository(context: Context) {
     init {
         loadSales()
         loadMenu()
+        SyncManager.databaseUrl = getDatabaseUrl()
 
         // Start background periodic sync loop
         repositoryScope.launch {
@@ -70,6 +71,20 @@ class SalesRepository(context: Context) {
 
     fun getSyncCode(): String = prefs.getString("sync_code", "") ?: ""
     fun setSyncCode(code: String) = prefs.edit().putString("sync_code", code).apply()
+
+    fun getDatabaseUrl(): String = prefs.getString("database_url", "https://momos-shop-manager-default-rtdb.asia-southeast1.firebasedatabase.app") ?: "https://momos-shop-manager-default-rtdb.asia-southeast1.firebasedatabase.app"
+    fun setDatabaseUrl(url: String) {
+        val cleanUrl = url.trim().removeSuffix("/")
+        prefs.edit().putString("database_url", cleanUrl).apply()
+        SyncManager.databaseUrl = cleanUrl
+        
+        // Trigger background sync immediately if sync is enabled
+        if (getSyncEnabled() && getSyncCode().isNotBlank()) {
+            repositoryScope.launch {
+                syncNow()
+            }
+        }
+    }
 
     fun getSyncEnabled(): Boolean = prefs.getBoolean("sync_enabled", false)
     fun setSyncEnabled(enabled: Boolean) {

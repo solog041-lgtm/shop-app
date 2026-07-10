@@ -12,7 +12,7 @@ import java.net.HttpURLConnection
 import java.net.URL
 
 object SyncManager {
-    private const val BASE_DB_URL = "https://momos-shop-manager-default-rtdb.asia-southeast1.firebasedatabase.app"
+    var databaseUrl: String = "https://momos-shop-manager-default-rtdb.asia-southeast1.firebasedatabase.app"
     private val json = Json { ignoreUnknownKeys = true; coerceInputValues = true }
 
     /**
@@ -23,6 +23,7 @@ object SyncManager {
         method: String,
         body: String? = null
     ): String? = withContext(Dispatchers.IO) {
+        if (databaseUrl.isBlank()) return@withContext null
         var connection: HttpURLConnection? = null
         try {
             val url = URL(urlString)
@@ -65,21 +66,21 @@ object SyncManager {
     // --- Sales Sync ---
 
     suspend fun pushSale(syncCode: String, sale: Sale): Boolean {
-        if (syncCode.isBlank()) return false
-        val url = "$BASE_DB_URL/shops/$syncCode/sales/${sale.id}.json"
+        if (syncCode.isBlank() || databaseUrl.isBlank()) return false
+        val url = "$databaseUrl/shops/$syncCode/sales/${sale.id}.json"
         val body = json.encodeToString(sale)
         return makeHttpRequest(url, "PUT", body) != null
     }
 
     suspend fun deleteSale(syncCode: String, saleId: String): Boolean {
-        if (syncCode.isBlank()) return false
-        val url = "$BASE_DB_URL/shops/$syncCode/sales/$saleId.json"
+        if (syncCode.isBlank() || databaseUrl.isBlank()) return false
+        val url = "$databaseUrl/shops/$syncCode/sales/$saleId.json"
         return makeHttpRequest(url, "DELETE") != null
     }
 
     suspend fun pullSales(syncCode: String): List<Sale> {
-        if (syncCode.isBlank()) return emptyList()
-        val url = "$BASE_DB_URL/shops/$syncCode/sales.json"
+        if (syncCode.isBlank() || databaseUrl.isBlank()) return emptyList()
+        val url = "$databaseUrl/shops/$syncCode/sales.json"
         val response = makeHttpRequest(url, "GET") ?: return emptyList()
         if (response.trim() == "null" || response.trim().isEmpty()) return emptyList()
 
@@ -95,15 +96,15 @@ object SyncManager {
     // --- Menu Sync ---
 
     suspend fun pushMenu(syncCode: String, menu: List<MenuItem>): Boolean {
-        if (syncCode.isBlank()) return false
-        val url = "$BASE_DB_URL/shops/$syncCode/menu.json"
+        if (syncCode.isBlank() || databaseUrl.isBlank()) return false
+        val url = "$databaseUrl/shops/$syncCode/menu.json"
         val body = json.encodeToString(menu)
         return makeHttpRequest(url, "PUT", body) != null
     }
 
     suspend fun pullMenu(syncCode: String): List<MenuItem>? {
-        if (syncCode.isBlank()) return null
-        val url = "$BASE_DB_URL/shops/$syncCode/menu.json"
+        if (syncCode.isBlank() || databaseUrl.isBlank()) return null
+        val url = "$databaseUrl/shops/$syncCode/menu.json"
         val response = makeHttpRequest(url, "GET") ?: return null
         if (response.trim() == "null" || response.trim().isEmpty()) return null
 
@@ -123,9 +124,9 @@ object SyncManager {
         role: UserRole,
         pin: String
     ): Boolean {
-        if (syncCode.isBlank() || phoneNumber.isBlank()) return false
+        if (syncCode.isBlank() || phoneNumber.isBlank() || databaseUrl.isBlank()) return false
         val sanitizedPhone = phoneNumber.filter { it.isDigit() }
-        val url = "$BASE_DB_URL/shops/$syncCode/devices/$sanitizedPhone.json"
+        val url = "$databaseUrl/shops/$syncCode/devices/$sanitizedPhone.json"
         val deviceData = DeviceInfo(
             phoneNumber = sanitizedPhone,
             role = role,
@@ -138,8 +139,8 @@ object SyncManager {
     }
 
     suspend fun pullDevices(syncCode: String): List<DeviceInfo> {
-        if (syncCode.isBlank()) return emptyList()
-        val url = "$BASE_DB_URL/shops/$syncCode/devices.json"
+        if (syncCode.isBlank() || databaseUrl.isBlank()) return emptyList()
+        val url = "$databaseUrl/shops/$syncCode/devices.json"
         val response = makeHttpRequest(url, "GET") ?: return emptyList()
         if (response.trim() == "null" || response.trim().isEmpty()) return emptyList()
 
@@ -153,9 +154,9 @@ object SyncManager {
     }
 
     suspend fun verifyCredentials(syncCode: String, phoneNumber: String, pin: String): DeviceInfo? {
-        if (syncCode.isBlank() || phoneNumber.isBlank()) return null
+        if (syncCode.isBlank() || phoneNumber.isBlank() || databaseUrl.isBlank()) return null
         val sanitizedPhone = phoneNumber.filter { it.isDigit() }
-        val url = "$BASE_DB_URL/shops/$syncCode/devices/$sanitizedPhone.json"
+        val url = "$databaseUrl/shops/$syncCode/devices/$sanitizedPhone.json"
         val response = makeHttpRequest(url, "GET") ?: return null
         if (response.trim() == "null" || response.trim().isEmpty()) return null
 

@@ -45,6 +45,9 @@ fun AuthScreen(viewModel: SalesViewModel) {
     var syncCode by remember { mutableStateOf("") }
     var pin by remember { mutableStateOf("") }
     
+    val databaseUrlState = viewModel.databaseUrl.collectAsState()
+    var databaseUrl by remember { mutableStateOf(databaseUrlState.value) }
+    
     // OTP State
     var simulatedOtp by remember { mutableStateOf("") }
     var otpCode by remember { mutableStateOf("") }
@@ -54,6 +57,7 @@ fun AuthScreen(viewModel: SalesViewModel) {
     // Visual error/loading states
     var phoneTouched by remember { mutableStateOf(false) }
     var syncCodeTouched by remember { mutableStateOf(false) }
+    var databaseUrlTouched by remember { mutableStateOf(false) }
     var pinTouched by remember { mutableStateOf(false) }
     var registrationError by remember { mutableStateOf<String?>(null) }
     var localLoading by remember { mutableStateOf(false) }
@@ -65,7 +69,8 @@ fun AuthScreen(viewModel: SalesViewModel) {
     val isPhoneValid = phone.length == 10 && phone.all { it.isDigit() }
     val isSyncCodeValid = syncCode.isNotBlank()
     val isPinValid = pin.length == 4 && pin.all { it.isDigit() }
-    val isFormValid = isPhoneValid && isSyncCodeValid && isPinValid
+    val isDatabaseUrlValid = databaseUrl.trim().startsWith("https://") && databaseUrl.trim().length > 12
+    val isFormValid = isPhoneValid && isSyncCodeValid && isPinValid && isDatabaseUrlValid
 
     // Timer effect
     LaunchedEffect(isOtpSent, timerSeconds) {
@@ -110,7 +115,7 @@ fun AuthScreen(viewModel: SalesViewModel) {
             Spacer(modifier = Modifier.height(16.dp))
             
             Text(
-                text = "Momos Shop Manager",
+                text = "Manjar",
                 style = MaterialTheme.typography.headlineLarge,
                 fontWeight = FontWeight.ExtraBold,
                 color = TextPrimary,
@@ -155,6 +160,49 @@ fun AuthScreen(viewModel: SalesViewModel) {
                                 fontWeight = FontWeight.Bold,
                                 color = MomosOrange
                             )
+                            
+                            // Firebase Database URL Field
+                            Column {
+                                Text(
+                                    text = "Firebase Database URL",
+                                    style = MaterialTheme.typography.labelMedium,
+                                    color = TextSecondary,
+                                    fontWeight = FontWeight.SemiBold,
+                                    modifier = Modifier.padding(bottom = 6.dp)
+                                )
+                                OutlinedTextField(
+                                    value = databaseUrl,
+                                    onValueChange = { 
+                                        databaseUrl = it
+                                        databaseUrlTouched = true
+                                    },
+                                    placeholder = { Text("e.g. https://your-shop.firebaseio.com", color = TextMuted) },
+                                    leadingIcon = {
+                                        Icon(
+                                            imageVector = Icons.Rounded.Cloud,
+                                            contentDescription = "DB Icon",
+                                            tint = if (isDatabaseUrlValid) MomosOrange else TextMuted
+                                        )
+                                    },
+                                    isError = databaseUrlTouched && !isDatabaseUrlValid,
+                                    singleLine = true,
+                                    modifier = Modifier.fillMaxWidth(),
+                                    colors = OutlinedTextFieldDefaults.colors(
+                                        focusedBorderColor = MomosOrange,
+                                        unfocusedBorderColor = DarkSurfaceVariant,
+                                        focusedContainerColor = DarkSurface,
+                                        unfocusedContainerColor = DarkSurface
+                                    )
+                                )
+                                if (databaseUrlTouched && !isDatabaseUrlValid) {
+                                    Text(
+                                        text = "URL must start with https://",
+                                        color = ErrorRed,
+                                        style = MaterialTheme.typography.bodySmall,
+                                        modifier = Modifier.padding(top = 4.dp)
+                                    )
+                                }
+                            }
                             
                             // Shop Sync Code Field
                             Column {
@@ -505,7 +553,7 @@ fun AuthScreen(viewModel: SalesViewModel) {
                                 onClick = {
                                     if (otpCode == simulatedOtp) {
                                         localLoading = true
-                                        viewModel.registerDevice(syncCode, phone, role, pin) { success, msg ->
+                                        viewModel.registerDevice(databaseUrl.trim(), syncCode, phone, role, pin) { success, msg ->
                                             localLoading = false
                                             if (success) {
                                                 Toast.makeText(context, "Registration Successful!", Toast.LENGTH_SHORT).show()
