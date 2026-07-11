@@ -186,15 +186,17 @@ class SalesRepository(context: Context) {
     // --- Sales CRUD ---
 
     fun addSale(sale: Sale) {
+        val userPhone = getUserPhone()
+        val enrichedSale = if (sale.createdBy.isBlank()) sale.copy(createdBy = userPhone) else sale
         val current = _sales.value.toMutableList()
-        current.add(0, sale)
+        current.add(0, enrichedSale)
         _sales.value = current
         saveSales()
 
         // Sync remote if enabled
         if (getSyncEnabled() && getSyncCode().isNotBlank()) {
             repositoryScope.launch {
-                SyncManager.pushSale(getSyncCode(), sale)
+                SyncManager.pushSale(getSyncCode(), enrichedSale)
                 // Refresh status timestamp
                 val timestamp = SimpleDateFormat("HH:mm", Locale.getDefault()).format(Date())
                 _syncStatusMessage.value = "Connected (Last: $timestamp)"

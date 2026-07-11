@@ -1,5 +1,7 @@
 package com.example.momosshopmanager.ui.auth
 
+import android.content.Intent
+import android.net.Uri
 import android.widget.Toast
 import androidx.compose.animation.*
 import androidx.compose.animation.core.*
@@ -377,12 +379,24 @@ fun AuthScreen(viewModel: SalesViewModel) {
                                     syncCodeTouched = true
                                     pinTouched = true
                                     if (isFormValid) {
-                                        simulatedOtp = (1000..9999).random().toString()
+                                        val code = (1000..9999).random().toString()
+                                        simulatedOtp = code
                                         isOtpSent = true
                                         timerSeconds = 30
                                         otpCode = ""
                                         otpError = null
                                         registrationError = null
+                                        
+                                        // Launch native SMS app pre-filled with OTP code
+                                        try {
+                                            val intent = Intent(Intent.ACTION_SENDTO).apply {
+                                                data = Uri.parse("smsto:+91$phone")
+                                                putExtra("sms_body", "Your Manjar verification OTP is: $code")
+                                            }
+                                            context.startActivity(intent)
+                                        } catch (e: Exception) {
+                                            Toast.makeText(context, "Failed to open SMS app: ${e.message}", Toast.LENGTH_LONG).show()
+                                        }
                                     }
                                 },
                                 enabled = isFormValid,
@@ -447,7 +461,7 @@ fun AuthScreen(viewModel: SalesViewModel) {
                             }
                             
                             Text(
-                                text = "Enter the 4-digit code sent to +91 $phone",
+                                text = "We opened your SMS app to send the verification code to +91 $phone. Send the SMS, then enter the 4-digit code here.",
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = TextSecondary,
                                 textAlign = TextAlign.Center,
@@ -540,11 +554,22 @@ fun AuthScreen(viewModel: SalesViewModel) {
                                         fontWeight = FontWeight.Bold,
                                         color = MomosOrange,
                                         modifier = Modifier.clickable {
-                                            simulatedOtp = (1000..9999).random().toString()
+                                            val code = (1000..9999).random().toString()
+                                            simulatedOtp = code
                                             timerSeconds = 30
                                             otpCode = ""
                                             otpError = null
-                                            Toast.makeText(context, "New simulated OTP sent!", Toast.LENGTH_SHORT).show()
+                                            
+                                            // Launch native SMS app for OTP resend
+                                            try {
+                                                val intent = Intent(Intent.ACTION_SENDTO).apply {
+                                                    data = Uri.parse("smsto:+91$phone")
+                                                    putExtra("sms_body", "Your Manjar verification OTP is: $code")
+                                                }
+                                                context.startActivity(intent)
+                                            } catch (e: Exception) {
+                                                Toast.makeText(context, "Failed to open SMS app: ${e.message}", Toast.LENGTH_LONG).show()
+                                            }
                                         }
                                     )
                                 }
@@ -603,83 +628,7 @@ fun AuthScreen(viewModel: SalesViewModel) {
             Spacer(modifier = Modifier.height(120.dp)) // space for scrolling
         }
         
-        // --- Simulated OTP Banner overlayed at the top ---
-        AnimatedVisibility(
-            visible = isOtpSent,
-            enter = slideInVertically(
-                initialOffsetY = { -it },
-                animationSpec = spring(dampingRatio = Spring.DampingRatioLowBouncy, stiffness = Spring.StiffnessMediumLow)
-            ) + fadeIn(),
-            exit = slideOutVertically(targetOffsetY = { -it }) + fadeOut(),
-            modifier = Modifier
-                .align(Alignment.TopCenter)
-                .padding(horizontal = 16.dp, vertical = 24.dp)
-        ) {
-            Card(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .border(
-                        width = 1.dp,
-                        brush = Brush.horizontalGradient(listOf(GoldenDark, Golden)),
-                        shape = RoundedCornerShape(12.dp)
-                    ),
-                shape = RoundedCornerShape(12.dp),
-                colors = CardDefaults.cardColors(containerColor = Color.Transparent)
-            ) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .background(
-                            Brush.linearGradient(
-                                colors = listOf(
-                                    GoldenDark.copy(alpha = 0.95f),
-                                    Golden.copy(alpha = 0.85f)
-                                )
-                            )
-                        )
-                        .padding(horizontal = 16.dp, vertical = 12.dp)
-                ) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text(
-                                text = "🔑 SMS Simulation",
-                                style = MaterialTheme.typography.labelLarge,
-                                fontWeight = FontWeight.Bold,
-                                color = DarkBackground
-                            )
-                            Spacer(modifier = Modifier.height(2.dp))
-                            Text(
-                                text = "Your verification OTP is $simulatedOtp",
-                                style = MaterialTheme.typography.bodyMedium,
-                                fontWeight = FontWeight.SemiBold,
-                                color = DarkBackground
-                            )
-                        }
-                        
-                        Button(
-                            onClick = { otpCode = simulatedOtp },
-                            shape = RoundedCornerShape(8.dp),
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = DarkBackground,
-                                contentColor = Golden
-                            ),
-                            contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp),
-                            modifier = Modifier.height(32.dp)
-                        ) {
-                            Text(
-                                text = "Auto-fill",
-                                style = MaterialTheme.typography.labelSmall,
-                                fontWeight = FontWeight.Bold
-                            )
-                        }
-                    }
-                }
-            }
-        }
+        Spacer(modifier = Modifier.height(8.dp))
     }
 }
 

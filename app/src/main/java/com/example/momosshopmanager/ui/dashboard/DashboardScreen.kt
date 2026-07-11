@@ -503,10 +503,16 @@ private fun RecentOrderCard(sale: Sale) {
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     PaymentBadge(paymentMethod = sale.paymentMethod)
-                    if (sale.customerName.isNotBlank()) {
+                    val createdByText = if (sale.createdBy.isNotBlank()) "by " + sale.createdBy.takeLast(10) else ""
+                    if (sale.customerName.isNotBlank() || createdByText.isNotBlank()) {
                         Spacer(modifier = Modifier.width(8.dp))
+                        val text = if (sale.customerName.isNotBlank() && createdByText.isNotBlank()) {
+                            "${sale.customerName} • $createdByText"
+                        } else {
+                            sale.customerName.ifBlank { createdByText }
+                        }
                         Text(
-                            text = sale.customerName,
+                            text = text,
                             style = MaterialTheme.typography.bodySmall,
                             color = TextSecondary,
                             maxLines = 1,

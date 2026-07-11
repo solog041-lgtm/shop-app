@@ -26,7 +26,8 @@ data class Sale(
     val timestamp: Long = System.currentTimeMillis(),
     val items: List<SaleItem>,
     val paymentMethod: PaymentMethod = PaymentMethod.CASH,
-    val customerName: String = ""
+    val customerName: String = "",
+    val createdBy: String = ""
 ) {
     val total: Double get() = items.sumOf { it.subtotal }
     val totalItems: Int get() = items.sumOf { it.quantity }

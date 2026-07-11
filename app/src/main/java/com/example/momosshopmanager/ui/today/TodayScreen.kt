@@ -503,13 +503,32 @@ private fun SaleCard(sale: Sale) {
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis,
                 )
-                if (sale.customerName.isNotBlank()) {
+                val createdByText = if (sale.createdBy.isNotBlank()) "by " + sale.createdBy.takeLast(10) else ""
+                if (sale.customerName.isNotBlank() || createdByText.isNotBlank()) {
                     Spacer(modifier = Modifier.height(2.dp))
-                    Text(
-                        text = sale.customerName,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = TextMuted,
-                    )
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        if (sale.customerName.isNotBlank()) {
+                            Text(
+                                text = sale.customerName,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = TextMuted,
+                            )
+                            if (createdByText.isNotBlank()) {
+                                Text(
+                                    text = " • ",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = TextMuted,
+                                )
+                            }
+                        }
+                        if (createdByText.isNotBlank()) {
+                            Text(
+                                text = createdByText,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MomosOrangeLight,
+                            )
+                        }
+                    }
                 }
             }
 
