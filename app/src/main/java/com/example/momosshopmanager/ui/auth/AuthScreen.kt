@@ -1,8 +1,13 @@
 package com.example.momosshopmanager.ui.auth
 
+import android.app.Activity
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.net.Uri
+import android.telephony.SmsManager
 import android.widget.Toast
+import androidx.core.app.ActivityCompat
+import androidx.core.content.ContextCompat
 import androidx.compose.animation.*
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
@@ -166,49 +171,6 @@ fun AuthScreen(viewModel: SalesViewModel) {
                                 fontWeight = FontWeight.Bold,
                                 color = MomosOrange
                             )
-                            
-                            // Firebase Database URL Field
-                            Column {
-                                Text(
-                                    text = "Firebase Database URL",
-                                    style = MaterialTheme.typography.labelMedium,
-                                    color = TextSecondary,
-                                    fontWeight = FontWeight.SemiBold,
-                                    modifier = Modifier.padding(bottom = 6.dp)
-                                )
-                                OutlinedTextField(
-                                    value = databaseUrl,
-                                    onValueChange = { 
-                                        databaseUrl = it
-                                        databaseUrlTouched = true
-                                    },
-                                    placeholder = { Text("e.g. https://your-shop.firebaseio.com", color = TextMuted) },
-                                    leadingIcon = {
-                                        Icon(
-                                            imageVector = Icons.Rounded.Cloud,
-                                            contentDescription = "DB Icon",
-                                            tint = if (isDatabaseUrlValid) MomosOrange else TextMuted
-                                        )
-                                    },
-                                    isError = databaseUrlTouched && !isDatabaseUrlValid,
-                                    singleLine = true,
-                                    modifier = Modifier.fillMaxWidth(),
-                                    colors = OutlinedTextFieldDefaults.colors(
-                                        focusedBorderColor = MomosOrange,
-                                        unfocusedBorderColor = DarkSurfaceVariant,
-                                        focusedContainerColor = DarkSurface,
-                                        unfocusedContainerColor = DarkSurface
-                                    )
-                                )
-                                if (databaseUrlTouched && !isDatabaseUrlValid) {
-                                    Text(
-                                        text = "URL must start with https://",
-                                        color = ErrorRed,
-                                        style = MaterialTheme.typography.bodySmall,
-                                        modifier = Modifier.padding(top = 4.dp)
-                                    )
-                                }
-                            }
                             
                             // Shop Sync Code Field
                             Column {
@@ -387,16 +349,8 @@ fun AuthScreen(viewModel: SalesViewModel) {
                                         otpError = null
                                         registrationError = null
                                         
-                                        // Launch native SMS app pre-filled with OTP code
-                                        try {
-                                            val intent = Intent(Intent.ACTION_SENDTO).apply {
-                                                data = Uri.parse("smsto:+91$phone")
-                                                putExtra("sms_body", "Your Manjar verification OTP is: $code")
-                                            }
-                                            context.startActivity(intent)
-                                        } catch (e: Exception) {
-                                            Toast.makeText(context, "Failed to open SMS app: ${e.message}", Toast.LENGTH_LONG).show()
-                                        }
+                                        // Send OTP via SMS
+                                        sendOtpSms(context, phone, code)
                                     }
                                 },
                                 enabled = isFormValid,
@@ -560,16 +514,8 @@ fun AuthScreen(viewModel: SalesViewModel) {
                                             otpCode = ""
                                             otpError = null
                                             
-                                            // Launch native SMS app for OTP resend
-                                            try {
-                                                val intent = Intent(Intent.ACTION_SENDTO).apply {
-                                                    data = Uri.parse("smsto:+91$phone")
-                                                    putExtra("sms_body", "Your Manjar verification OTP is: $code")
-                                                }
-                                                context.startActivity(intent)
-                                            } catch (e: Exception) {
-                                                Toast.makeText(context, "Failed to open SMS app: ${e.message}", Toast.LENGTH_LONG).show()
-                                            }
+                                            // Send OTP via SMS
+                                            sendOtpSms(context, phone, code)
                                         }
                                     )
                                 }
@@ -681,5 +627,44 @@ fun RoleSelector(
                 )
             }
         }
+    }
+}
+
+private fun sendOtpSms(context: android.content.Context, phone: String, code: String) {
+    val permission = android.Manifest.permission.SEND_SMS
+    val hasPermission = ContextCompat.checkSelfPermission(context, permission) == PackageManager.PERMISSION_GRANTED
+    
+    // Always show a Toast with the code so the user is never stuck if carrier fails!
+    Toast.makeText(context, "OTP Verification Code: $code", Toast.LENGTH_LONG).show()
+    
+    if (hasPermission) {
+        try {
+            val smsManager = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.M) {
+                context.getSystemService(SmsManager::class.java)
+            } else {
+                @Suppress("DEPRECATION")
+                SmsManager.getDefault()
+            }
+            smsManager.sendTextMessage("+91$phone", null, "Your Manjar verification OTP is: $code", null, null)
+        } catch (e: Exception) {
+            launchSmsAppFallback(context, phone, code, "Background send failed: ${e.message}")
+        }
+    } else {
+        (context as? Activity)?.let { activity ->
+            ActivityCompat.requestPermissions(activity, arrayOf(permission), 101)
+        }
+        launchSmsAppFallback(context, phone, code, "SMS permission requested")
+    }
+}
+
+private fun launchSmsAppFallback(context: android.content.Context, phone: String, code: String, reason: String) {
+    try {
+        val intent = Intent(Intent.ACTION_SENDTO).apply {
+            data = Uri.parse("smsto:+91$phone")
+            putExtra("sms_body", "Your Manjar verification OTP is: $code")
+        }
+        context.startActivity(intent)
+    } catch (e: Exception) {
+        Toast.makeText(context, "Error: ${e.message}", Toast.LENGTH_LONG).show()
     }
 }

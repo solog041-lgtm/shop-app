@@ -207,68 +207,7 @@ fun SettingsScreen(viewModel: SalesViewModel) {
                         }
                     }
 
-                    Spacer(modifier = Modifier.height(16.dp))
-                    HorizontalDivider(color = DarkSurfaceVariant, thickness = 0.5.dp)
-                    Spacer(modifier = Modifier.height(16.dp))
-
-                    // Database URL Display
-                    val databaseUrl by viewModel.databaseUrl.collectAsState()
-                    var editingDbUrl by remember { mutableStateOf(false) }
-                    var tempDbUrl by remember { mutableStateOf(databaseUrl) }
-
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text(text = "Firebase Database URL", style = MaterialTheme.typography.labelMedium, color = TextSecondary)
-                            Spacer(modifier = Modifier.height(4.dp))
-                            if (editingDbUrl && isOwner) {
-                                OutlinedTextField(
-                                    value = tempDbUrl,
-                                    onValueChange = { tempDbUrl = it },
-                                    singleLine = true,
-                                    modifier = Modifier.fillMaxWidth(),
-                                    colors = OutlinedTextFieldDefaults.colors(
-                                        focusedBorderColor = MomosOrange,
-                                        unfocusedBorderColor = DarkSurfaceVariant
-                                    )
-                                )
-                            } else {
-                                Text(
-                                    text = databaseUrl.ifBlank { "Not set" },
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    color = TextPrimary,
-                                    fontWeight = FontWeight.Medium
-                                )
-                            }
-                        }
-                        if (isOwner) {
-                            IconButton(
-                                onClick = {
-                                    if (editingDbUrl) {
-                                        if (tempDbUrl.trim().startsWith("https://") && tempDbUrl.trim().length > 12) {
-                                            viewModel.setDatabaseUrl(tempDbUrl.trim())
-                                            editingDbUrl = false
-                                            Toast.makeText(context, "Database URL updated!", Toast.LENGTH_SHORT).show()
-                                        } else {
-                                            Toast.makeText(context, "Invalid URL! Must start with https://", Toast.LENGTH_SHORT).show()
-                                        }
-                                    } else {
-                                        tempDbUrl = databaseUrl
-                                        editingDbUrl = true
-                                    }
-                                }
-                            ) {
-                                Icon(
-                                    imageVector = if (editingDbUrl) Icons.Rounded.Check else Icons.Rounded.Edit,
-                                    contentDescription = "Edit DB URL",
-                                    tint = MomosOrange
-                                )
-                            }
-                        }
-                    }
+                    Spacer(modifier = Modifier.height(8.dp))
 
                     Spacer(modifier = Modifier.height(16.dp))
                     HorizontalDivider(color = DarkSurfaceVariant, thickness = 0.5.dp)
@@ -655,35 +594,57 @@ fun SettingsScreen(viewModel: SalesViewModel) {
                             }
                         }
 
-                        Spacer(modifier = Modifier.height(12.dp))
-                        HorizontalDivider(color = DarkSurfaceVariant, thickness = 0.5.dp)
-                        Spacer(modifier = Modifier.height(12.dp))
+                    }
+                }
+            }
+        }
 
-                        // Log Out
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
+        // --- Session / Log Out Card (Visible to Everyone) ---
+        item {
+            Spacer(modifier = Modifier.height(8.dp))
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(16.dp),
+                colors = CardDefaults.cardColors(containerColor = DarkCard)
+            ) {
+                Column(modifier = Modifier.padding(16.dp)) {
+                    Text(
+                        text = "Device Session",
+                        style = MaterialTheme.typography.titleMedium,
+                        color = TextPrimary,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Text(
+                        text = "Manage your login session on this device.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = TextSecondary
+                    )
+
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(text = "Log Out", style = MaterialTheme.typography.bodyMedium, color = TextPrimary, fontWeight = FontWeight.Bold)
+                            Text(text = "Disconnect registration and lock app access.", style = MaterialTheme.typography.bodySmall, color = TextMuted)
+                        }
+                        Spacer(modifier = Modifier.width(16.dp))
+                        Button(
+                            onClick = { showLogoutWarning = true },
+                            shape = RoundedCornerShape(12.dp),
+                            colors = ButtonDefaults.buttonColors(containerColor = DarkCardElevated, contentColor = ErrorRed),
+                            border = BorderStroke(1.dp, ErrorRed.copy(alpha = 0.5f))
                         ) {
-                            Column(modifier = Modifier.weight(1f)) {
-                                Text(text = "Log Out", style = MaterialTheme.typography.bodyMedium, color = TextPrimary, fontWeight = FontWeight.Bold)
-                                Text(text = "Disconnect registration and lock app access.", style = MaterialTheme.typography.bodySmall, color = TextMuted)
-                            }
-                            Spacer(modifier = Modifier.width(16.dp))
-                            Button(
-                                onClick = { showLogoutWarning = true },
-                                shape = RoundedCornerShape(12.dp),
-                                colors = ButtonDefaults.buttonColors(containerColor = DarkCardElevated, contentColor = ErrorRed),
-                                border = BorderStroke(1.dp, ErrorRed.copy(alpha = 0.5f))
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Rounded.Logout,
-                                    contentDescription = "Logout",
-                                    modifier = Modifier.size(18.dp)
-                                )
-                                Spacer(modifier = Modifier.width(4.dp))
-                                Text("Log Out", style = MaterialTheme.typography.labelMedium)
-                            }
+                            Icon(
+                                imageVector = Icons.Rounded.Logout,
+                                contentDescription = "Logout",
+                                modifier = Modifier.size(18.dp)
+                            )
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text("Log Out", style = MaterialTheme.typography.labelMedium)
                         }
                     }
                 }
