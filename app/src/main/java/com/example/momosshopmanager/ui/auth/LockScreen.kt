@@ -180,7 +180,7 @@ fun LockScreen(viewModel: SalesViewModel) {
                 Spacer(modifier = Modifier.height(20.dp))
 
                 Text(
-                    text = "🥟 Momos Shop",
+                    text = "🥟 Manjar",
                     style = MaterialTheme.typography.displayMedium,
                     fontWeight = FontWeight.Bold,
                     color = TextPrimary
