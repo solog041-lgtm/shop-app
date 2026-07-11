@@ -43,23 +43,10 @@ enum class PaymentMethod(val displayName: String) {
 object MenuDefaults {
     val defaultMenu = listOf(
         MenuItem(id = "steam8", name = "Steam Momo (8pc)", category = "Steamed", price = 80.0),
-        MenuItem(id = "steam12", name = "Steam Momo (12pc)", category = "Steamed", price = 120.0),
-        MenuItem(id = "fried8", name = "Fried Momo (8pc)", category = "Fried", price = 100.0),
-        MenuItem(id = "fried12", name = "Fried Momo (12pc)", category = "Fried", price = 140.0),
-        MenuItem(id = "tandoori8", name = "Tandoori Momo (8pc)", category = "Tandoori", price = 120.0),
-        MenuItem(id = "tandoori12", name = "Tandoori Momo (12pc)", category = "Tandoori", price = 160.0),
-        MenuItem(id = "kurkure8", name = "Kurkure Momo (8pc)", category = "Kurkure", price = 120.0),
-        MenuItem(id = "kurkure12", name = "Kurkure Momo (12pc)", category = "Kurkure", price = 160.0),
-        MenuItem(id = "gravy", name = "Gravy Momo", category = "Gravy", price = 130.0),
-        MenuItem(id = "soup", name = "Soup Momo", category = "Soup", price = 100.0),
-        MenuItem(id = "combo", name = "Momo Combo Plate", category = "Combo", price = 180.0),
-        MenuItem(id = "chili", name = "Chili Momo", category = "Special", price = 130.0),
-        MenuItem(id = "paneer8", name = "Paneer Momo (8pc)", category = "Special", price = 110.0),
-        MenuItem(id = "chicken8", name = "Chicken Momo (8pc)", category = "Non-Veg", price = 120.0),
-        MenuItem(id = "chicken12", name = "Chicken Momo (12pc)", category = "Non-Veg", price = 160.0),
+        MenuItem(id = "steam12", name = "Steam Momo (12pc)", category = "Steamed", price = 120.0)
     )
 
-    val categories = listOf("Steamed", "Fried", "Tandoori", "Kurkure", "Gravy", "Soup", "Combo", "Special", "Non-Veg")
+    val categories = listOf("Steamed")
 }
 
 @Serializable
@@ -74,6 +61,17 @@ data class DeviceInfo(
     val role: UserRole,
     val deviceName: String,
     val registeredAt: Long,
-    val pin: String
+    val pin: String,
+    val userName: String = ""
+)
+
+@Serializable
+data class Alert(
+    val id: String = java.util.UUID.randomUUID().toString(),
+    val type: String = "LOW_STOCK",
+    val message: String,
+    val senderName: String,
+    val senderPhone: String,
+    val timestamp: Long = System.currentTimeMillis()
 )
 

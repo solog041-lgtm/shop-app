@@ -51,9 +51,28 @@ fun AuthScreen(viewModel: SalesViewModel) {
     var role by remember { mutableStateOf(UserRole.OWNER) }
     var syncCode by remember { mutableStateOf("") }
     var pin by remember { mutableStateOf("") }
+    var userName by remember { mutableStateOf("") }
+    var ownerPasswordInput by remember { mutableStateOf("") }
     
     val databaseUrlState by viewModel.databaseUrl.collectAsState()
     var databaseUrl by remember { mutableStateOf(databaseUrlState) }
+    
+    var userNameTouched by remember { mutableStateOf(false) }
+    var ownerPasswordInputTouched by remember { mutableStateOf(false) }
+    var isOwnerPasswordRegistered by remember { mutableStateOf(false) }
+    
+    LaunchedEffect(syncCode) {
+        if (syncCode.isNotBlank()) {
+            try {
+                val pwd = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                    SyncManager.getOwnerPassword(syncCode)
+                }
+                isOwnerPasswordRegistered = pwd != null
+            } catch (e: Exception) {
+                isOwnerPasswordRegistered = false
+            }
+        }
+    }
     
     LaunchedEffect(databaseUrlState) {
         databaseUrl = databaseUrlState
@@ -81,7 +100,9 @@ fun AuthScreen(viewModel: SalesViewModel) {
     val isSyncCodeValid = syncCode.isNotBlank()
     val isPinValid = pin.length == 4 && pin.all { it.isDigit() }
     val isDatabaseUrlValid = databaseUrl.trim().startsWith("https://") && databaseUrl.trim().length > 12
-    val isFormValid = isPhoneValid && isSyncCodeValid && isPinValid && isDatabaseUrlValid
+    val isUserNameValid = if (role == UserRole.EMPLOYEE) userName.isNotBlank() else true
+    val isOwnerPasswordValid = if (role == UserRole.OWNER) ownerPasswordInput.isNotBlank() else true
+    val isFormValid = isPhoneValid && isSyncCodeValid && isPinValid && isDatabaseUrlValid && isUserNameValid && isOwnerPasswordValid
 
     // Timer effect
     LaunchedEffect(isOtpSent, timerSeconds) {
@@ -260,6 +281,100 @@ fun AuthScreen(viewModel: SalesViewModel) {
                                     )
                                 }
                             }
+
+                            // Employee Name Field
+                            if (role == UserRole.EMPLOYEE) {
+                                Column {
+                                    Text(
+                                        text = "Full Name",
+                                        style = MaterialTheme.typography.labelMedium,
+                                        color = TextSecondary,
+                                        fontWeight = FontWeight.SemiBold,
+                                        modifier = Modifier.padding(bottom = 6.dp)
+                                    )
+                                    OutlinedTextField(
+                                        value = userName,
+                                        onValueChange = { 
+                                            userName = it
+                                            userNameTouched = true
+                                        },
+                                        placeholder = { Text("e.g. Rahul Sharma", color = TextMuted) },
+                                        leadingIcon = {
+                                            Icon(
+                                                imageVector = Icons.Rounded.Person,
+                                                contentDescription = "Person Icon",
+                                                tint = if (userName.isNotBlank()) MomosOrange else TextMuted
+                                            )
+                                        },
+                                        isError = userNameTouched && userName.isBlank(),
+                                        singleLine = true,
+                                        modifier = Modifier.fillMaxWidth(),
+                                        colors = OutlinedTextFieldDefaults.colors(
+                                            focusedBorderColor = MomosOrange,
+                                            unfocusedBorderColor = DarkSurfaceVariant,
+                                            focusedContainerColor = DarkSurface,
+                                            unfocusedContainerColor = DarkSurface
+                                        )
+                                    )
+                                    if (userNameTouched && userName.isBlank()) {
+                                        Text(
+                                            text = "Employee Name is required",
+                                            color = ErrorRed,
+                                            style = MaterialTheme.typography.bodySmall,
+                                            modifier = Modifier.padding(top = 4.dp)
+                                        )
+                                    }
+                                }
+                            }
+
+                            // Owner Gated Setup Password Field
+                            if (role == UserRole.OWNER) {
+                                Column {
+                                    val pwdLabel = if (isOwnerPasswordRegistered) "Verify Owner Password" else "Create Owner Setup Password"
+                                    val pwdPlaceholder = if (isOwnerPasswordRegistered) "Enter shop setup password" else "Set new shop setup password"
+                                    Text(
+                                        text = pwdLabel,
+                                        style = MaterialTheme.typography.labelMedium,
+                                        color = TextSecondary,
+                                        fontWeight = FontWeight.SemiBold,
+                                        modifier = Modifier.padding(bottom = 6.dp)
+                                    )
+                                    OutlinedTextField(
+                                        value = ownerPasswordInput,
+                                        onValueChange = { 
+                                            ownerPasswordInput = it
+                                            ownerPasswordInputTouched = true
+                                        },
+                                        placeholder = { Text(pwdPlaceholder, color = TextMuted) },
+                                        leadingIcon = {
+                                            Icon(
+                                                imageVector = Icons.Rounded.VpnKey,
+                                                contentDescription = "Key Icon",
+                                                tint = if (ownerPasswordInput.isNotBlank()) MomosOrange else TextMuted
+                                            )
+                                        },
+                                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+                                        visualTransformation = PasswordVisualTransformation(),
+                                        isError = ownerPasswordInputTouched && ownerPasswordInput.isBlank(),
+                                        singleLine = true,
+                                        modifier = Modifier.fillMaxWidth(),
+                                        colors = OutlinedTextFieldDefaults.colors(
+                                            focusedBorderColor = MomosOrange,
+                                            unfocusedBorderColor = DarkSurfaceVariant,
+                                            focusedContainerColor = DarkSurface,
+                                            unfocusedContainerColor = DarkSurface
+                                        )
+                                    )
+                                    if (ownerPasswordInputTouched && ownerPasswordInput.isBlank()) {
+                                        Text(
+                                            text = "Password is required",
+                                            color = ErrorRed,
+                                            style = MaterialTheme.typography.bodySmall,
+                                            modifier = Modifier.padding(top = 4.dp)
+                                        )
+                                    }
+                                }
+                            }
                             
                             // Role Selection
                             Column {
@@ -321,6 +436,31 @@ fun AuthScreen(viewModel: SalesViewModel) {
                                         modifier = Modifier.padding(top = 4.dp)
                                     )
                                 }
+                            }
+
+                            // Security protocol banner at the bottom
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clip(RoundedCornerShape(10.dp))
+                                    .background(MomosOrange.copy(alpha = 0.05f))
+                                    .padding(vertical = 8.dp, horizontal = 12.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.Center
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Rounded.VerifiedUser,
+                                    contentDescription = "Shield",
+                                    tint = MomosOrange,
+                                    modifier = Modifier.size(16.dp)
+                                )
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text(
+                                    text = "🔒 Gated Security Setup Protocol",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MomosOrangeLight,
+                                    fontWeight = FontWeight.Bold
+                                )
                             }
                             
                             if (registrationError != null) {
@@ -528,7 +668,7 @@ fun AuthScreen(viewModel: SalesViewModel) {
                                 onClick = {
                                     if (otpCode == simulatedOtp) {
                                         localLoading = true
-                                        viewModel.registerDevice(databaseUrl.trim(), syncCode, phone, role, pin) { success, msg ->
+                                        viewModel.registerDevice(databaseUrl.trim(), syncCode, phone, role, pin, userName, ownerPasswordInput) { success, msg ->
                                             localLoading = false
                                             if (success) {
                                                 Toast.makeText(context, "Registration Successful!", Toast.LENGTH_SHORT).show()

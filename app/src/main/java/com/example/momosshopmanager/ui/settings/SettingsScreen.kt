@@ -206,105 +206,6 @@ fun SettingsScreen(viewModel: SalesViewModel) {
                             )
                         }
                     }
-
-                    Spacer(modifier = Modifier.height(8.dp))
-
-                    Spacer(modifier = Modifier.height(16.dp))
-                    HorizontalDivider(color = DarkSurfaceVariant, thickness = 0.5.dp)
-                    Spacer(modifier = Modifier.height(16.dp))
-
-                    // Sync Toggle
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text(
-                                text = "Internet Sync",
-                                style = MaterialTheme.typography.bodyLarge,
-                                color = TextPrimary,
-                                fontWeight = FontWeight.Bold
-                            )
-                            Text(
-                                text = "Keep sales and menu items updated with cloud servers.",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = TextSecondary
-                            )
-                        }
-                        Spacer(modifier = Modifier.width(16.dp))
-                        Switch(
-                            checked = syncEnabled,
-                            onCheckedChange = { viewModel.setSyncEnabled(it) },
-                            colors = SwitchDefaults.colors(
-                                checkedThumbColor = Color.White,
-                                checkedTrackColor = MomosOrange,
-                                uncheckedThumbColor = TextMuted,
-                                uncheckedTrackColor = DarkSurfaceVariant
-                            )
-                        )
-                    }
-
-                    Spacer(modifier = Modifier.height(16.dp))
-                    HorizontalDivider(color = DarkSurfaceVariant, thickness = 0.5.dp)
-                    Spacer(modifier = Modifier.height(16.dp))
-
-                    // Dynamic Status Indicator & Sync Button
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
-                            val dotColor = when {
-                                syncingState -> WarningAmber
-                                !syncEnabled -> TextMuted
-                                syncStatusMessage.startsWith("Connected") -> SuccessGreen
-                                syncStatusMessage.contains("Error") -> ErrorRed
-                                else -> WarningAmber
-                            }
-                            Box(
-                                modifier = Modifier
-                                    .size(10.dp)
-                                    .clip(CircleShape)
-                                    .background(dotColor)
-                            )
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text(
-                                text = syncStatusMessage,
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = TextPrimary
-                            )
-                        }
-
-                        Button(
-                            onClick = { viewModel.triggerManualSync() },
-                            enabled = syncEnabled && !syncingState,
-                            shape = RoundedCornerShape(12.dp),
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = MomosOrange,
-                                contentColor = Color.White,
-                                disabledContainerColor = DarkCardElevated,
-                                disabledContentColor = TextMuted
-                            )
-                        ) {
-                            if (syncingState) {
-                                CircularProgressIndicator(
-                                    modifier = Modifier.size(18.dp),
-                                    strokeWidth = 2.dp,
-                                    color = TextMuted
-                                )
-                            } else {
-                                Icon(
-                                    imageVector = Icons.Rounded.Sync,
-                                    contentDescription = "Sync Now",
-                                    modifier = Modifier.size(18.dp)
-                                )
-                                Spacer(modifier = Modifier.width(6.dp))
-                                Text(text = "Sync Now", style = MaterialTheme.typography.labelMedium)
-                            }
-                        }
-                    }
                 }
             }
         }
@@ -476,8 +377,13 @@ fun SettingsScreen(viewModel: SalesViewModel) {
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Column(modifier = Modifier.weight(1f)) {
+                                val displayNameText = if (device.userName.isNotBlank()) {
+                                    "${device.userName} (${device.deviceName})"
+                                } else {
+                                    device.deviceName
+                                }
                                 Text(
-                                    text = device.deviceName,
+                                    text = displayNameText,
                                     style = MaterialTheme.typography.bodyLarge,
                                     color = TextPrimary,
                                     fontWeight = FontWeight.Bold

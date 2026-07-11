@@ -175,7 +175,8 @@ object SyncManager {
         syncCode: String,
         phoneNumber: String,
         role: UserRole,
-        pin: String
+        pin: String,
+        userName: String
     ): Boolean {
         if (syncCode.isBlank() || phoneNumber.isBlank() || databaseUrl.isBlank()) return false
         val sanitizedPhone = phoneNumber.filter { it.isDigit() }
@@ -185,7 +186,8 @@ object SyncManager {
             role = role,
             deviceName = "${Build.MANUFACTURER} ${Build.MODEL}",
             registeredAt = System.currentTimeMillis(),
-            pin = pin
+            pin = pin,
+            userName = userName
         )
         val body = json.encodeToString(deviceData)
         return makeHttpRequest(url, "PUT", body) != null
@@ -220,5 +222,49 @@ object SyncManager {
             e.printStackTrace()
             null
         }
+    }
+
+    suspend fun getOwnerPassword(syncCode: String): String? {
+        if (syncCode.isBlank() || databaseUrl.isBlank()) return null
+        val url = "$databaseUrl/shops/$syncCode/owner_password.json"
+        val response = makeHttpRequest(url, "GET") ?: return null
+        if (response.trim() == "null" || response.trim().isEmpty()) return null
+        return try {
+            json.decodeFromString<String>(response)
+        } catch (e: Exception) {
+            response.trim().removeSurrounding("\"")
+        }
+    }
+
+    suspend fun setOwnerPassword(syncCode: String, password: String): Boolean {
+        if (syncCode.isBlank() || password.isBlank() || databaseUrl.isBlank()) return false
+        val url = "$databaseUrl/shops/$syncCode/owner_password.json"
+        val body = json.encodeToString(password)
+        return makeHttpRequest(url, "PUT", body) != null
+    }
+
+    suspend fun pushAlert(syncCode: String, alert: Alert): Boolean {
+        if (syncCode.isBlank() || databaseUrl.isBlank()) return false
+        val url = "$databaseUrl/shops/$syncCode/alerts.json"
+        val body = json.encodeToString(alert)
+        return makeHttpRequest(url, "PUT", body) != null
+    }
+
+    suspend fun pullAlert(syncCode: String): Alert? {
+        if (syncCode.isBlank() || databaseUrl.isBlank()) return null
+        val url = "$databaseUrl/shops/$syncCode/alerts.json"
+        val response = makeHttpRequest(url, "GET") ?: return null
+        if (response.trim() == "null" || response.trim().isEmpty()) return null
+        return try {
+            json.decodeFromString<Alert>(response)
+        } catch (e: Exception) {
+            null
+        }
+    }
+
+    suspend fun clearAlert(syncCode: String): Boolean {
+        if (syncCode.isBlank() || databaseUrl.isBlank()) return false
+        val url = "$databaseUrl/shops/$syncCode/alerts.json"
+        return makeHttpRequest(url, "DELETE") != null
     }
 }

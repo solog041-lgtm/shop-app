@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.draw.alpha
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.AccessTime
@@ -155,10 +156,9 @@ fun AnalyticsScreen(viewModel: SalesViewModel) {
         )
 
         val peakSlots = listOf(
-            "Morning" to "6 AM – 12 PM",
-            "Lunch" to "12 PM – 3 PM",
-            "Evening" to "3 PM – 7 PM",
-            "Night" to "7 PM – 11 PM"
+            "Afternoon" to "12 PM – 4 PM",
+            "Evening" to "4 PM – 8 PM",
+            "Night" to "8 PM – 11:15 PM"
         )
         val maxOrders = peakHours.values.maxOrNull() ?: 0
 
@@ -174,7 +174,9 @@ fun AnalyticsScreen(viewModel: SalesViewModel) {
                     label = label,
                     timeRange = timeRange,
                     count = count,
-                    isHighest = isHighest
+                    isHighest = isHighest,
+                    maxOrders = maxOrders,
+                    animationProgress = animationProgress
                 )
             }
         }
@@ -311,13 +313,36 @@ private fun AverageCard(
     Card(
         modifier = modifier,
         shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.Transparent)
+        colors = CardDefaults.cardColors(containerColor = DarkCard),
+        border = BorderStroke(1.dp, Color.White.copy(alpha = 0.05f))
     ) {
         Box(
             modifier = Modifier
+                .fillMaxWidth()
                 .background(gradient)
                 .padding(14.dp)
         ) {
+            Canvas(
+                modifier = Modifier
+                    .matchParentSize()
+                    .alpha(0.15f)
+            ) {
+                val width = size.width
+                val height = size.height
+                val path = androidx.compose.ui.graphics.Path().apply {
+                    moveTo(0f, height * 0.85f)
+                    lineTo(width * 0.25f, height * 0.65f)
+                    lineTo(width * 0.5f, height * 0.8f)
+                    lineTo(width * 0.75f, height * 0.5f)
+                    lineTo(width, height * 0.35f)
+                }
+                drawPath(
+                    path = path,
+                    color = accentColor,
+                    style = Stroke(width = 2.dp.toPx(), cap = StrokeCap.Round)
+                )
+            }
+
             Column(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 modifier = Modifier.fillMaxWidth()
@@ -332,8 +357,8 @@ private fun AverageCard(
                 Text(
                     text = value,
                     color = TextPrimary,
-                    style = MaterialTheme.typography.titleSmall,
-                    fontWeight = FontWeight.Bold,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Black,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
@@ -357,19 +382,25 @@ private fun BestSellerRow(
     maxQuantity: Int,
     animationProgress: Float
 ) {
-    val medalColor = when (rank) {
-        1 -> Golden
-        2 -> TextSecondary          // silver
-        3 -> MomosOrange             // bronze-like warm tone
-        else -> TextMuted
+    val medalGradient = when (rank) {
+        1 -> Brush.linearGradient(colors = listOf(Color(0xFFFFE082), Color(0xFFFFB300)))
+        2 -> Brush.linearGradient(colors = listOf(Color(0xFFE2E8F0), Color(0xFF94A3B8)))
+        3 -> Brush.linearGradient(colors = listOf(Color(0xFFFFAB91), Color(0xFFD84315)))
+        else -> Brush.linearGradient(colors = listOf(DarkSurfaceVariant, DarkSurfaceVariant))
     }
+    
+    val medalTextColor = when (rank) {
+        1 -> Color(0xFF5D4037)
+        2 -> Color(0xFF1E293B)
+        3 -> Color.White
+        else -> TextSecondary
+    }
+
     val barColor = when (rank) {
         1 -> Golden
-        2 -> GoldenLight
-        3 -> MomosOrangeLight
-        4 -> ChartTeal
-        5 -> ChartBlue
-        else -> ChartBlue
+        2 -> ChartBlue
+        3 -> MomosOrange
+        else -> ChartTeal
     }
 
     Row(
@@ -382,13 +413,13 @@ private fun BestSellerRow(
             modifier = Modifier
                 .size(26.dp)
                 .clip(CircleShape)
-                .background(medalColor.copy(alpha = 0.20f))
+                .background(medalGradient)
         ) {
             Text(
                 text = "$rank",
-                color = medalColor,
+                color = medalTextColor,
                 fontSize = 12.sp,
-                fontWeight = FontWeight.Bold
+                fontWeight = FontWeight.Black
             )
         }
 
@@ -399,7 +430,7 @@ private fun BestSellerRow(
             text = name,
             color = TextPrimary,
             style = MaterialTheme.typography.bodySmall,
-            fontWeight = FontWeight.Medium,
+            fontWeight = FontWeight.Bold,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
             modifier = Modifier.weight(1f)
@@ -416,7 +447,7 @@ private fun BestSellerRow(
         ) {
             // Track
             drawRoundRect(
-                color = DarkSurfaceVariant,
+                color = DarkSurfaceVariant.copy(alpha = 0.5f),
                 cornerRadius = CornerRadius(7.dp.toPx()),
                 size = Size(size.width, size.height)
             )
@@ -451,45 +482,76 @@ private fun PeakHourCard(
     label: String,
     timeRange: String,
     count: Int,
-    isHighest: Boolean
+    isHighest: Boolean,
+    maxOrders: Int,
+    animationProgress: Float
 ) {
-    val containerColor = if (isHighest) MomosOrange.copy(alpha = 0.18f) else DarkCard
-    val borderColor = if (isHighest) MomosOrange else Color.Transparent
+    val containerColor = if (isHighest) MomosOrange.copy(alpha = 0.08f) else DarkCard
+    val borderColor = if (isHighest) MomosOrange.copy(alpha = 0.5f) else Color.White.copy(alpha = 0.05f)
+    val accent = if (isHighest) MomosOrange else ChartTeal
 
-    OutlinedCard(
+    Card(
         modifier = modifier,
         shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.outlinedCardColors(containerColor = containerColor),
-        border = BorderStroke(
-            width = if (isHighest) 1.5.dp else 1.dp,
-            color = if (isHighest) borderColor else DarkSurfaceVariant
-        )
+        colors = CardDefaults.cardColors(containerColor = containerColor),
+        border = BorderStroke(if (isHighest) 1.5.dp else 1.dp, borderColor)
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(vertical = 14.dp, horizontal = 6.dp),
+                .padding(12.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Text(
                 text = label,
                 color = if (isHighest) MomosOrange else TextSecondary,
                 style = MaterialTheme.typography.labelSmall,
-                fontWeight = FontWeight.Medium,
+                fontWeight = FontWeight.Bold,
                 maxLines = 1
             )
-            Spacer(modifier = Modifier.height(6.dp))
             Text(
-                text = "$count",
-                color = if (isHighest) MomosOrange else TextPrimary,
-                style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.Bold
-            )
-            Spacer(modifier = Modifier.height(2.dp))
-            Text(
-                text = "orders",
+                text = timeRange,
                 color = TextMuted,
-                style = MaterialTheme.typography.labelSmall
+                style = MaterialTheme.typography.labelSmall,
+                fontSize = 8.sp,
+                maxLines = 1
+            )
+            
+            Spacer(modifier = Modifier.height(10.dp))
+            
+            val fraction = if (maxOrders > 0) count.toFloat() / maxOrders else 0f
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(48.dp)
+                    .clip(RoundedCornerShape(8.dp))
+                    .background(DarkSurfaceVariant.copy(alpha = 0.4f)),
+                contentAlignment = Alignment.BottomCenter
+            ) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .fillMaxHeight(fraction * animationProgress)
+                        .background(
+                            Brush.verticalGradient(
+                                colors = listOf(accent, accent.copy(alpha = 0.4f))
+                            )
+                        )
+                )
+                Text(
+                    text = "$count",
+                    color = Color.White,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Black,
+                    modifier = Modifier.align(Alignment.Center)
+                )
+            }
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(
+                text = "Orders",
+                color = TextMuted,
+                style = MaterialTheme.typography.labelSmall,
+                fontSize = 8.sp
             )
         }
     }

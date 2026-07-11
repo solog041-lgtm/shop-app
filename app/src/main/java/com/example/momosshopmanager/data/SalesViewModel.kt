@@ -105,6 +105,77 @@ class SalesViewModel(application: Application) : AndroidViewModel(application) {
     private val _databaseUrl = MutableStateFlow(repository.getDatabaseUrl())
     val databaseUrl: StateFlow<String> = _databaseUrl.asStateFlow()
 
+    private val _activeAlert = MutableStateFlow<Alert?>(null)
+    val activeAlert: StateFlow<Alert?> = _activeAlert.asStateFlow()
+
+    init {
+        // 1. Polling for Low Stock Alerts (Owners only)
+        viewModelScope.launch {
+            while (true) {
+                if (_isRegistered.value && _userRole.value == UserRole.OWNER && _syncCode.value.isNotBlank()) {
+                    try {
+                        val alert = SyncManager.pullAlert(_syncCode.value)
+                        if (alert != null) {
+                            if (_activeAlert.value?.id != alert.id) {
+                                playAlertSound()
+                            }
+                            _activeAlert.value = alert
+                        } else {
+                            _activeAlert.value = null
+                        }
+                    } catch (e: Exception) {
+                        e.printStackTrace()
+                    }
+                }
+                kotlinx.coroutines.delay(5000)
+            }
+        }
+
+        // 2. Real-time Auto Lock verification (Locks app after 11:15 PM)
+        viewModelScope.launch {
+            while (true) {
+                if (_isRegistered.value && !_isAppLocked.value) {
+                    if (repository.isAppLockedToday()) {
+                        _isAppLocked.value = true
+                    }
+                }
+                kotlinx.coroutines.delay(10000)
+            }
+        }
+    }
+
+    private fun playAlertSound() {
+        try {
+            val notificationUri = android.media.RingtoneManager.getDefaultUri(android.media.RingtoneManager.TYPE_NOTIFICATION)
+            val ringtone = android.media.RingtoneManager.getRingtone(getApplication(), notificationUri)
+            ringtone.play()
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+    }
+
+    fun raiseLowStockAlert() {
+        viewModelScope.launch {
+            if (_syncCode.value.isNotBlank()) {
+                val alert = Alert(
+                    message = "Stock is getting over. Send more momos!",
+                    senderName = repository.getUserName(),
+                    senderPhone = repository.getUserPhone()
+                )
+                SyncManager.pushAlert(_syncCode.value, alert)
+            }
+        }
+    }
+
+    fun acknowledgeAlert() {
+        viewModelScope.launch {
+            if (_syncCode.value.isNotBlank()) {
+                SyncManager.clearAlert(_syncCode.value)
+                _activeAlert.value = null
+            }
+        }
+    }
+
     // --- Authentication Actions ---
 
     fun registerDevice(
@@ -113,6 +184,8 @@ class SalesViewModel(application: Application) : AndroidViewModel(application) {
         phone: String,
         role: UserRole,
         pin: String,
+        userName: String,
+        ownerPasswordInput: String,
         onResult: (Boolean, String) -> Unit
     ) {
         viewModelScope.launch {
@@ -123,19 +196,43 @@ class SalesViewModel(application: Application) : AndroidViewModel(application) {
             repository.setDatabaseUrl(dbUrl)
             _databaseUrl.value = repository.getDatabaseUrl()
 
-            // 1. Register device to cloud
-            val ok = SyncManager.registerDevice(code, phone, role, pin)
+            // Check Gated Safety Protocol for Owner
+            if (role == UserRole.OWNER) {
+                val dbPassword = SyncManager.getOwnerPassword(code)
+                if (dbPassword == null) {
+                    if (ownerPasswordInput.isBlank()) {
+                        repository._syncingState.value = false
+                        onResult(false, "First Owner: Please define a new Owner Setup Password!")
+                        return@launch
+                    }
+                    val created = SyncManager.setOwnerPassword(code, ownerPasswordInput.trim())
+                    if (!created) {
+                        repository._syncingState.value = false
+                        onResult(false, "Failed to initialize Owner Setup Password in cloud.")
+                        return@launch
+                    }
+                } else {
+                    if (ownerPasswordInput.trim() != dbPassword) {
+                        repository._syncingState.value = false
+                        onResult(false, "Incorrect Owner Setup Password for this shop!")
+                        return@launch
+                    }
+                }
+            }
+
+            // Register device to cloud
+            val ok = SyncManager.registerDevice(code, phone, role, pin, userName)
             if (ok) {
-                // 2. Save settings locally
+                // Save settings locally
                 repository.setSyncCode(code)
                 repository.setUserPhone(phone)
                 repository.setUserRole(role)
-                repository.setOwnerPin(pin)
-                repository.setSyncEnabled(true)
+                repository.setUserPin(pin)
+                repository.setUserName(userName)
                 repository.setRegistered(true)
                 repository.unlockAppForToday()
 
-                // 3. Update view model state
+                // Update view model state
                 _syncCode.value = code
                 _userPhone.value = phone
                 _userRole.value = role
@@ -143,13 +240,13 @@ class SalesViewModel(application: Application) : AndroidViewModel(application) {
                 _isRegistered.value = true
                 _isAppLocked.value = false
 
-                // 4. Pull down any remote data
+                // Pull down any remote data
                 repository.syncNow()
 
                 onResult(true, "Registration Successful!")
             } else {
                 repository._syncStatusMessage.value = "Registration Failed"
-                onResult(false, "Failed to connect to server. Check your Sync Code & Database URL.")
+                onResult(false, "Failed to connect to server. Check your Sync Code & Network.")
             }
             repository._syncingState.value = false
         }
@@ -161,7 +258,7 @@ class SalesViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun verifyDailyPin(pin: String): Boolean {
-        val correctPin = repository.getOwnerPin()
+        val correctPin = repository.getUserPin()
         return if (pin == correctPin) {
             repository.unlockAppForToday()
             _isAppLocked.value = false

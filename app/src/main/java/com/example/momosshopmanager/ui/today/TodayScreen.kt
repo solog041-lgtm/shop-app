@@ -27,17 +27,25 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.clickable
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material.icons.rounded.Remove
 import androidx.compose.material.icons.rounded.Search
+import androidx.compose.material.icons.rounded.NotificationsActive
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.TextButton
+import androidx.compose.ui.platform.LocalContext
+import android.widget.Toast
+import com.example.momosshopmanager.data.UserRole
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
@@ -86,6 +94,7 @@ import com.example.momosshopmanager.theme.DarkCard
 import com.example.momosshopmanager.theme.DarkCardElevated
 import com.example.momosshopmanager.theme.DarkSurface
 import com.example.momosshopmanager.theme.DarkSurfaceVariant
+import com.example.momosshopmanager.theme.ErrorRed
 import com.example.momosshopmanager.theme.GradientOrangeEnd
 import com.example.momosshopmanager.theme.GradientOrangeStart
 import com.example.momosshopmanager.theme.MomosOrange
@@ -102,6 +111,7 @@ import java.util.Locale
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun TodayScreen(viewModel: SalesViewModel) {
+    val context = LocalContext.current
     val todaySales by viewModel.todaySales.collectAsState()
     val todayTotal by viewModel.todayTotal.collectAsState()
     val todayOrderCount by viewModel.todayOrderCount.collectAsState()
@@ -162,6 +172,67 @@ fun TodayScreen(viewModel: SalesViewModel) {
                     if (!isSearchVisible) searchQuery = ""
                 },
             )
+
+            // ── Stock Alert Button (Visible to Employees) ──
+            val userRole by viewModel.userRole.collectAsState()
+            if (userRole == UserRole.EMPLOYEE) {
+                var showStockAlertConfirm by remember { mutableStateOf(false) }
+                
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 8.dp)
+                        .clickable { showStockAlertConfirm = true },
+                    shape = RoundedCornerShape(12.dp),
+                    colors = CardDefaults.cardColors(containerColor = ErrorRed.copy(alpha = 0.12f)),
+                    border = BorderStroke(1.dp, ErrorRed.copy(alpha = 0.35f))
+                ) {
+                    Row(
+                        modifier = Modifier.padding(14.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Rounded.NotificationsActive,
+                            contentDescription = "Stock Alert",
+                            tint = ErrorRed,
+                            modifier = Modifier.size(20.dp)
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = "🚨 Alert Owner: Low Stock",
+                            style = MaterialTheme.typography.bodyMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = ErrorRed
+                        )
+                    }
+                }
+                
+                if (showStockAlertConfirm) {
+                    AlertDialog(
+                        onDismissRequest = { showStockAlertConfirm = false },
+                        title = { Text("🚨 Low Stock Alert") },
+                        text = { Text("Are you sure you want to ring the owner that stock is running low?") },
+                        confirmButton = {
+                            Button(
+                                onClick = {
+                                    viewModel.raiseLowStockAlert()
+                                    showStockAlertConfirm = false
+                                    Toast.makeText(context, "Stock alarm sent to Owner!", Toast.LENGTH_SHORT).show()
+                                },
+                                colors = ButtonDefaults.buttonColors(containerColor = ErrorRed)
+                            ) {
+                                Text("Ring Owner")
+                            }
+                        },
+                        dismissButton = {
+                            TextButton(onClick = { showStockAlertConfirm = false }) {
+                                Text("Cancel")
+                            }
+                        }
+                    )
+                }
+            }
 
             // ── Sales List ──
             if (filteredSales.isEmpty()) {

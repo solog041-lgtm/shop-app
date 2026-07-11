@@ -96,21 +96,28 @@ class SalesRepository(context: Context) {
         }
     }
 
-    fun getSyncEnabled(): Boolean = prefs.getBoolean("sync_enabled", false)
-    fun setSyncEnabled(enabled: Boolean) {
-        prefs.edit().putBoolean("sync_enabled", enabled).apply()
-        if (enabled) {
-            // Trigger sync immediately in background
-            repositoryScope.launch {
-                syncNow()
-            }
-        }
-    }
+    fun getSyncEnabled(): Boolean = true
+    fun setSyncEnabled(enabled: Boolean) {}
 
     fun getOwnerPin(): String = prefs.getString("owner_pin", "1234") ?: "1234"
     fun setOwnerPin(pin: String) = prefs.edit().putString("owner_pin", pin).apply()
 
+    fun getUserPin(): String = prefs.getString("user_pin", "1234") ?: "1234"
+    fun setUserPin(pin: String) = prefs.edit().putString("user_pin", pin).apply()
+
+    fun getUserName(): String = prefs.getString("user_name", "") ?: ""
+    fun setUserName(name: String) = prefs.edit().putString("user_name", name).apply()
+
     fun isAppLockedToday(): Boolean {
+        val now = Calendar.getInstance()
+        val hour = now.get(Calendar.HOUR_OF_DAY)
+        val minute = now.get(Calendar.MINUTE)
+        
+        // Auto lock app after 11:15 PM (23:15)
+        if (hour > 23 || (hour == 23 && minute >= 15)) {
+            return true
+        }
+        
         val todayStr = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date())
         val lastUnlock = prefs.getString("last_unlock_date", "")
         return lastUnlock != todayStr
@@ -336,10 +343,9 @@ class SalesRepository(context: Context) {
     fun getPeakHours(): Flow<Map<String, Int>> = _sales.map { all ->
         val cal = Calendar.getInstance()
         val hourLabels = mapOf(
-            "Morning" to (6..11),
-            "Lunch" to (12..14),
-            "Evening" to (15..18),
-            "Night" to (19..22)
+            "Afternoon" to (12..15),
+            "Evening" to (16..19),
+            "Night" to (20..23)
         )
         hourLabels.mapValues { (_, range) ->
             all.count { sale ->
