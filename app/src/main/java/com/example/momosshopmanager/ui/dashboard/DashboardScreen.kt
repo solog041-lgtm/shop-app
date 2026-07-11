@@ -26,6 +26,7 @@ import androidx.compose.material.icons.rounded.CalendarMonth
 import androidx.compose.material.icons.rounded.CurrencyRupee
 import androidx.compose.material.icons.rounded.Receipt
 import androidx.compose.material.icons.rounded.TrendingUp
+import androidx.compose.material.icons.rounded.TrendingDown
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Button
@@ -84,6 +85,8 @@ fun DashboardScreen(viewModel: SalesViewModel) {
     val last7DaysSales by viewModel.last7DaysSales.collectAsState()
     val recentSales by viewModel.recentSales.collectAsState()
     val activeAlert by viewModel.activeAlert.collectAsState()
+    val totalExpenses by viewModel.totalExpenses.collectAsState()
+    val netProfit by viewModel.netProfit.collectAsState()
 
     val currentDate = remember {
         SimpleDateFormat("EEEE, dd MMMM yyyy", Locale.getDefault()).format(Date())
@@ -137,14 +140,20 @@ fun DashboardScreen(viewModel: SalesViewModel) {
                             )
                             Spacer(modifier = Modifier.width(12.dp))
                             Column {
+                                val alertTitle = if (!alert.resourceName.isNullOrBlank()) "🚨 RESOURCE ALARM!" else "🚨 LOW STOCK ALARM!"
+                                val alertMsg = if (!alert.resourceName.isNullOrBlank()) {
+                                    "${alert.senderName} (${alert.senderPhone}) says '${alert.resourceName}' is EMPTY!"
+                                } else {
+                                    "${alert.senderName} (${alert.senderPhone}) says stock is low! Send momos!"
+                                }
                                 Text(
-                                    text = "🚨 LOW STOCK ALARM!",
+                                    text = alertTitle,
                                     color = Color.White,
                                     style = MaterialTheme.typography.titleMedium,
                                     fontWeight = FontWeight.Black
                                 )
                                 Text(
-                                    text = "${alert.senderName} (${alert.senderPhone}) says stock is low! Send momos!",
+                                    text = alertMsg,
                                     color = Color.White.copy(alpha = 0.9f),
                                     style = MaterialTheme.typography.bodyMedium,
                                     fontWeight = FontWeight.Bold
@@ -183,11 +192,13 @@ fun DashboardScreen(viewModel: SalesViewModel) {
             GreetingHeader(currentDate)
         }
 
-        // ─── KPI Grid (2 × 2) ─────────────────────────────────
+        // ─── KPI Grid (2 × 2 + Profit Card) ─────────────────────────────────
         item {
             KpiGrid(
                 todayTotal = todayTotal,
                 monthlyTotal = monthlyTotal,
+                totalExpenses = totalExpenses,
+                netProfit = netProfit,
                 averageSale = averageSale,
                 todayOrderCount = todayOrderCount
             )
@@ -265,6 +276,8 @@ private fun GreetingHeader(currentDate: String) {
 private fun KpiGrid(
     todayTotal: Double,
     monthlyTotal: Double,
+    totalExpenses: Double,
+    netProfit: Double,
     averageSale: Double,
     todayOrderCount: Int
 ) {
@@ -284,29 +297,6 @@ private fun KpiGrid(
             )
             KpiCard(
                 modifier = Modifier.weight(1f),
-                label = "Monthly Sales",
-                value = "₹%,.0f".format(monthlyTotal),
-                icon = Icons.Rounded.CalendarMonth,
-                gradientStart = GradientRedStart,
-                gradientEnd = GradientRedEnd,
-                iconTint = ChiliRed
-            )
-        }
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            KpiCard(
-                modifier = Modifier.weight(1f),
-                label = "Avg Sale Value",
-                value = "₹%,.0f".format(averageSale),
-                icon = Icons.Rounded.TrendingUp,
-                gradientStart = GoldenDark,
-                gradientEnd = Golden,
-                iconTint = Golden
-            )
-            KpiCard(
-                modifier = Modifier.weight(1f),
                 label = "Today's Orders",
                 value = todayOrderCount.toString(),
                 icon = Icons.Rounded.Receipt,
@@ -315,6 +305,45 @@ private fun KpiGrid(
                 iconTint = ChartTeal
             )
         }
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            KpiCard(
+                modifier = Modifier.weight(1f),
+                label = "Monthly Sales",
+                value = "₹%,.0f".format(monthlyTotal),
+                icon = Icons.Rounded.CalendarMonth,
+                gradientStart = GoldenDark,
+                gradientEnd = Golden,
+                iconTint = Golden
+            )
+            KpiCard(
+                modifier = Modifier.weight(1f),
+                label = "Monthly Expenses",
+                value = "₹%,.0f".format(totalExpenses),
+                icon = Icons.Rounded.Receipt,
+                gradientStart = GradientRedStart,
+                gradientEnd = GradientRedEnd,
+                iconTint = ChiliRed
+            )
+        }
+        
+        // Full width Net Profit Card
+        val profitColorStart = if (netProfit >= 0) SuccessGreen.copy(alpha = 0.8f) else GradientRedStart
+        val profitColorEnd = if (netProfit >= 0) SuccessGreen.copy(alpha = 0.5f) else GradientRedEnd
+        val profitIconTint = if (netProfit >= 0) SuccessGreen else ChiliRed
+        val labelSuffix = if (netProfit >= 0) "(Profit)" else "(Loss)"
+        
+        KpiCard(
+            modifier = Modifier.fillMaxWidth(),
+            label = "Monthly Net Profit $labelSuffix",
+            value = "₹%,.0f".format(netProfit),
+            icon = if (netProfit >= 0) Icons.Rounded.TrendingUp else Icons.Rounded.TrendingDown,
+            gradientStart = profitColorStart,
+            gradientEnd = profitColorEnd,
+            iconTint = profitIconTint
+        )
     }
 }
 

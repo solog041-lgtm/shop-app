@@ -14,6 +14,8 @@ import androidx.compose.material.icons.rounded.CalendarMonth
 import androidx.compose.material.icons.rounded.Home
 import androidx.compose.material.icons.rounded.ReceiptLong
 import androidx.compose.material.icons.rounded.Settings
+import androidx.compose.material.icons.rounded.Inventory
+import androidx.compose.material.icons.rounded.Receipt
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
@@ -30,6 +32,8 @@ import com.example.momosshopmanager.ui.dashboard.DashboardScreen
 import com.example.momosshopmanager.ui.monthly.MonthlyScreen
 import com.example.momosshopmanager.ui.today.TodayScreen
 import com.example.momosshopmanager.ui.settings.SettingsScreen
+import com.example.momosshopmanager.ui.resources.ResourcesScreen
+import com.example.momosshopmanager.ui.expenses.ExpensesScreen
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -46,6 +50,8 @@ class MainActivity : ComponentActivity() {
 enum class Screen(val label: String, val icon: ImageVector) {
     DASHBOARD("Dashboard", Icons.Rounded.Home),
     TODAY("Today", Icons.Rounded.ReceiptLong),
+    RESOURCES("Inventory", Icons.Rounded.Inventory),
+    EXPENSES("Expenses", Icons.Rounded.Receipt),
     MONTHLY("Monthly", Icons.Rounded.CalendarMonth),
     ANALYTICS("Analytics", Icons.Rounded.Analytics),
     SETTINGS("Settings", Icons.Rounded.Settings)
@@ -80,7 +86,7 @@ fun MomosAppContent(viewModel: SalesViewModel) {
         if (userRole == UserRole.OWNER) {
             Screen.entries
         } else {
-            listOf(Screen.TODAY, Screen.SETTINGS)
+            listOf(Screen.TODAY, Screen.RESOURCES, Screen.SETTINGS)
         }
     }
 
@@ -136,6 +142,8 @@ fun MomosAppContent(viewModel: SalesViewModel) {
                 when (screen) {
                     Screen.DASHBOARD -> DashboardScreen(viewModel = viewModel)
                     Screen.TODAY -> TodayScreen(viewModel = viewModel)
+                    Screen.RESOURCES -> ResourcesScreen(viewModel = viewModel)
+                    Screen.EXPENSES -> ExpensesScreen(viewModel = viewModel)
                     Screen.MONTHLY -> MonthlyScreen(viewModel = viewModel)
                     Screen.ANALYTICS -> AnalyticsScreen(viewModel = viewModel)
                     Screen.SETTINGS -> SettingsScreen(viewModel = viewModel)

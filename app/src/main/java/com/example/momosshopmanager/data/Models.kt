@@ -72,6 +72,26 @@ data class Alert(
     val message: String,
     val senderName: String,
     val senderPhone: String,
-    val timestamp: Long = System.currentTimeMillis()
+    val timestamp: Long = System.currentTimeMillis(),
+    val resourceName: String? = null
+)
+
+@Serializable
+data class ShopResource(
+    val id: String = java.util.UUID.randomUUID().toString(),
+    val name: String,
+    val quantity: String = "",
+    val status: String = "IN_STOCK", // IN_STOCK, RUNNING_LOW, OUT_OF_STOCK
+    val lastUpdated: Long = System.currentTimeMillis()
+)
+
+@Serializable
+data class Expense(
+    val id: String = java.util.UUID.randomUUID().toString(),
+    val amount: Double,
+    val category: String, // e.g. Ingredients, Wages, Rent, Gas, Other
+    val description: String,
+    val timestamp: Long = System.currentTimeMillis(),
+    val recordedBy: String
 )
 

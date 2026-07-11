@@ -323,4 +323,51 @@ class SalesViewModel(application: Application) : AndroidViewModel(application) {
     fun loadSampleData() {
         repository.generateSampleData()
     }
+
+    // --- Resources & Expenses flows ---
+    val resources: StateFlow<List<ShopResource>> = repository.resources
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    val expenses: StateFlow<List<Expense>> = repository.expenses
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    val totalExpenses: StateFlow<Double> = repository.expenses
+        .map { list -> list.sumOf { it.amount } }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0.0)
+
+    val netProfit: StateFlow<Double> = combine(monthlyTotal, totalExpenses) { sales, expensesVal ->
+        sales - expensesVal
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0.0)
+
+    // --- Resources Actions ---
+    fun addResource(resource: ShopResource) {
+        repository.addResource(resource)
+    }
+
+    fun deleteResource(resourceId: String) {
+        repository.deleteResource(resourceId)
+    }
+
+    fun raiseResourceAlarm(resourceName: String) {
+        viewModelScope.launch {
+            if (_syncCode.value.isNotBlank()) {
+                val alert = Alert(
+                    message = "$resourceName is out of stock!",
+                    senderName = repository.getUserName(),
+                    senderPhone = repository.getUserPhone(),
+                    resourceName = resourceName
+                )
+                SyncManager.pushAlert(_syncCode.value, alert)
+            }
+        }
+    }
+
+    // --- Expenses Actions ---
+    fun addExpense(expense: Expense) {
+        repository.addExpense(expense)
+    }
+
+    fun deleteExpense(expenseId: String) {
+        repository.deleteExpense(expenseId)
+    }
 }

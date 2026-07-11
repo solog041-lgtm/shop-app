@@ -31,6 +31,12 @@ class SalesRepository(context: Context) {
     private val _menuItems = MutableStateFlow(MenuDefaults.defaultMenu)
     val menuItems: Flow<List<MenuItem>> = _menuItems.asStateFlow()
 
+    private val _resources = MutableStateFlow<List<ShopResource>>(emptyList())
+    val resources: Flow<List<ShopResource>> = _resources.asStateFlow()
+
+    private val _expenses = MutableStateFlow<List<Expense>>(emptyList())
+    val expenses: Flow<List<Expense>> = _expenses.asStateFlow()
+
     // Sync state flows for UI updates
     val _syncingState = MutableStateFlow(false)
     val _syncStatusMessage = MutableStateFlow("Idle")
@@ -38,6 +44,8 @@ class SalesRepository(context: Context) {
     init {
         loadSales()
         loadMenu()
+        loadResources()
+        loadExpenses()
         SyncManager.databaseUrl = getDatabaseUrl()
 
         // Auto-detect database URL from google-services.json if using the default placeholder
@@ -176,6 +184,24 @@ class SalesRepository(context: Context) {
             } else {
                 // If cloud menu is empty, push local menu
                 SyncManager.pushMenu(code, _menuItems.value)
+            }
+
+            // 3. Pull Resources from cloud
+            val remoteResources = SyncManager.pullResources(code)
+            if (remoteResources.isNotEmpty()) {
+                _resources.value = remoteResources
+                saveResources(remoteResources)
+            } else if (_resources.value.isNotEmpty()) {
+                SyncManager.pushResources(code, _resources.value)
+            }
+
+            // 4. Pull Expenses from cloud
+            val remoteExpenses = SyncManager.pullExpenses(code)
+            if (remoteExpenses.isNotEmpty()) {
+                _expenses.value = remoteExpenses
+                saveExpenses(remoteExpenses)
+            } else if (_expenses.value.isNotEmpty()) {
+                SyncManager.pushExpenses(code, _expenses.value)
             }
 
             val timestamp = SimpleDateFormat("HH:mm", Locale.getDefault()).format(Date())
@@ -428,6 +454,94 @@ class SalesRepository(context: Context) {
                 _menuItems.value = json.decodeFromString(data)
             } catch (_: Exception) {
                 _menuItems.value = MenuDefaults.defaultMenu
+            }
+        }
+    }
+
+    private fun saveResources(list: List<ShopResource>) {
+        val data = json.encodeToString(list)
+        prefs.edit().putString("resources", data).apply()
+    }
+
+    private fun loadResources() {
+        val data = prefs.getString("resources", null)
+        if (data != null) {
+            try {
+                _resources.value = json.decodeFromString(data)
+            } catch (_: Exception) {
+                _resources.value = emptyList()
+            }
+        }
+    }
+
+    private fun saveExpenses(list: List<Expense>) {
+        val data = json.encodeToString(list)
+        prefs.edit().putString("expenses", data).apply()
+    }
+
+    private fun loadExpenses() {
+        val data = prefs.getString("expenses", null)
+        if (data != null) {
+            try {
+                _expenses.value = json.decodeFromString(data)
+            } catch (_: Exception) {
+                _expenses.value = emptyList()
+            }
+        }
+    }
+
+    // --- Resources CRUD ---
+    fun addResource(resource: ShopResource) {
+        val current = _resources.value.toMutableList()
+        current.removeAll { it.id == resource.id }
+        current.add(resource)
+        _resources.value = current
+        saveResources(current)
+
+        if (getSyncEnabled() && getSyncCode().isNotBlank()) {
+            repositoryScope.launch {
+                SyncManager.pushResources(getSyncCode(), current)
+            }
+        }
+    }
+
+    fun deleteResource(resourceId: String) {
+        val current = _resources.value.toMutableList()
+        current.removeAll { it.id == resourceId }
+        _resources.value = current
+        saveResources(current)
+
+        if (getSyncEnabled() && getSyncCode().isNotBlank()) {
+            repositoryScope.launch {
+                SyncManager.pushResources(getSyncCode(), current)
+            }
+        }
+    }
+
+    // --- Expenses CRUD ---
+    fun addExpense(expense: Expense) {
+        val current = _expenses.value.toMutableList()
+        current.removeAll { it.id == expense.id }
+        current.add(expense)
+        _expenses.value = current
+        saveExpenses(current)
+
+        if (getSyncEnabled() && getSyncCode().isNotBlank()) {
+            repositoryScope.launch {
+                SyncManager.pushExpenses(getSyncCode(), current)
+            }
+        }
+    }
+
+    fun deleteExpense(expenseId: String) {
+        val current = _expenses.value.toMutableList()
+        current.removeAll { it.id == expenseId }
+        _expenses.value = current
+        saveExpenses(current)
+
+        if (getSyncEnabled() && getSyncCode().isNotBlank()) {
+            repositoryScope.launch {
+                SyncManager.pushExpenses(getSyncCode(), current)
             }
         }
     }

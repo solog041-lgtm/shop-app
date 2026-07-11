@@ -267,4 +267,53 @@ object SyncManager {
         val url = "$databaseUrl/shops/$syncCode/alerts.json"
         return makeHttpRequest(url, "DELETE") != null
     }
+
+    suspend fun pushResources(syncCode: String, resources: List<ShopResource>): Boolean {
+        if (syncCode.isBlank() || databaseUrl.isBlank()) return false
+        val url = "$databaseUrl/shops/$syncCode/resources.json"
+        val body = json.encodeToString(resources)
+        return makeHttpRequest(url, "PUT", body) != null
+    }
+
+    suspend fun pullResources(syncCode: String): List<ShopResource> {
+        if (syncCode.isBlank() || databaseUrl.isBlank()) return emptyList()
+        val url = "$databaseUrl/shops/$syncCode/resources.json"
+        val response = makeHttpRequest(url, "GET") ?: return emptyList()
+        if (response.trim() == "null" || response.trim().isEmpty()) return emptyList()
+        return try {
+            json.decodeFromString<List<ShopResource>>(response)
+        } catch (e: Exception) {
+            // Fallback for map decoding if written differently by some other client
+            try {
+                val map = json.decodeFromString<Map<String, ShopResource>>(response)
+                map.values.toList()
+            } catch (ex: Exception) {
+                emptyList()
+            }
+        }
+    }
+
+    suspend fun pushExpenses(syncCode: String, expenses: List<Expense>): Boolean {
+        if (syncCode.isBlank() || databaseUrl.isBlank()) return false
+        val url = "$databaseUrl/shops/$syncCode/expenses.json"
+        val body = json.encodeToString(expenses)
+        return makeHttpRequest(url, "PUT", body) != null
+    }
+
+    suspend fun pullExpenses(syncCode: String): List<Expense> {
+        if (syncCode.isBlank() || databaseUrl.isBlank()) return emptyList()
+        val url = "$databaseUrl/shops/$syncCode/expenses.json"
+        val response = makeHttpRequest(url, "GET") ?: return emptyList()
+        if (response.trim() == "null" || response.trim().isEmpty()) return emptyList()
+        return try {
+            json.decodeFromString<List<Expense>>(response)
+        } catch (e: Exception) {
+            try {
+                val map = json.decodeFromString<Map<String, Expense>>(response)
+                map.values.toList()
+            } catch (ex: Exception) {
+                emptyList()
+            }
+        }
+    }
 }
